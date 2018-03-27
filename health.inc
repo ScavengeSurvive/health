@@ -9,6 +9,8 @@
 #endif
 #define _health_included
 
+#include "health_version"
+
 
 #include <a_samp>
 #include <logger>

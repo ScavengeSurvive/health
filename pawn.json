@@ -1,0 +1,18 @@
+{
+	"user": "ScavengeSurvive",
+	"repo": "health",
+	"entry": "test.pwn",
+	"output": "test.amx",
+	"dependencies": [
+		"sampctl/samp-stdlib",
+		"pawn-lang/YSI-Includes",
+		"Southclaws/samp-logger",
+		"ScavengeSurvive/mathutil",
+		"Southclaws/progress2",
+		"ScavengeSurvive/tick-difference",
+		"ScavengeSurvive/energy"
+	],
+	"dev_dependencies": [
+		"ScavengeSurvive/test-boilerplate"
+	]
+}

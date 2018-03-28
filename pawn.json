@@ -10,9 +10,13 @@
 		"ScavengeSurvive/mathutil",
 		"Southclaws/progress2",
 		"ScavengeSurvive/tick-difference",
-		"ScavengeSurvive/energy"
+		"ScavengeSurvive/energy",
+		"ScavengeSurvive/action-text",
+		"ScavengeSurvive/language"
 	],
 	"dev_dependencies": [
-		"ScavengeSurvive/test-boilerplate"
+		"ScavengeSurvive/test-boilerplate",
+		"Southclaws/zcmd",
+		"oscar-broman/strlib"
 	]
 }

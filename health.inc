@@ -16,6 +16,7 @@
 #include <logger>
 #include <mathutil>
 #include <energy>
+#include <language>
 #include <YSI\y_iterate>
 
 #include "knockout.inc"
@@ -85,6 +86,13 @@ forward OnPlayerWounded(playerid, targetid);
 // -
 
 
+hook OnScriptInit() {
+	new languageid = InitLanguage("English");
+	AddLanguageEntry(languageid, "WOUNDEDMSSG", "Wounded: %s~n~Severity: %s");
+
+	Iter_Init(health_WoundIndex);
+}
+
 hook OnPlayerConnect(playerid) {
 	health_Active[playerid] = true;
 	health_DeltDamageTo[playerid][0] = EOS;
@@ -95,10 +103,6 @@ hook OnPlayerConnect(playerid) {
 	Iter_Clear(health_WoundIndex[playerid]);
 
 	return 1;
-}
-
-hook OnScriptInit() {
-	Iter_Init(health_WoundIndex);
 }
 
 
@@ -139,6 +143,7 @@ stock SetPlayerBlood(playerid, Float:blood) {
 	}
 
 	health_Blood[playerid] = blood;
+	SetPlayerHealth(playerid, blood);
 	return 0;
 }
 
@@ -234,7 +239,9 @@ stock PlayerInflictWound(playerid, targetid, E_WOUND_TYPE:type, Float:bleedrate,
 		case BODY_PART_HEAD:		knockmult *= 9.9;
 	}
 
-	if(frandom(100.0) < knockmult * (((woundcount + 1) * 0.2) * ((totalbleedrate * 50) + 1))) {
+	new Float:knockoutchance = knockmult * ((woundcount + 1) * 0.2) * ((totalbleedrate * 50) + 1);
+
+	if(frandom(100.0) < knockoutchance) {
 		new
 			Float:hp = health_Blood[targetid],
 			knockouttime;
@@ -278,12 +285,15 @@ stock PlayerInflictWound(playerid, targetid, E_WOUND_TYPE:type, Float:bleedrate,
 
 	CallLocalFunction("OnPlayerWounded", "dd", playerid, targetid);
 
-	// ShowActionText(targetid,
-	// 	sprintf(ls(targetid, "WOUNDEDMSSG", true),
-	// 		source,
-	// 		(knockmult * (((woundcount + 1) * 0.2) * ((totalbleedrate * 50) + 1)) < 50.0 ? ("Minor") : ("Severe"))
-	// 	),
-	// 	5000);
+	new message[128];
+	format(
+		message,
+		sizeof(message),
+		@L(targetid, "WOUNDEDMSSG", true),
+		source,
+		knockoutchance < 50.0 ? ("Minor") : ("Severe")
+	);
+	ShowActionText(targetid, message, 5000);
 
 	return 1;
 }
@@ -365,6 +375,10 @@ stock GetPlayerWounds(playerid, &wounds) {
 
 	wounds = Iter_Count(health_WoundIndex[playerid]);
 	return 0;
+}
+
+stock Float:GetBleedSlowRate(Float:blood, Float:bleedrate, wounds) {
+	return (((((100.0 - blood) / 360.0) * bleedrate) / (1 + wounds)) / 100.0);
 }
 
 stock GetPlayerWoundsPerBodypart(playerid, output[7]) {
@@ -490,7 +504,14 @@ stock DeSerialiseWoundData(playerid, input[]) {
 // -
 
 
-ptask _health_update[100](playerid) {
+hook OnPlayerUpdate(playerid) {
+	if(health_Active[playerid]) {
+		SetPlayerHealth(playerid, health_Blood[playerid]);
+	}
+	return Y_HOOKS_CONTINUE_RETURN_1;
+}
+
+ptask _health_timerUpdate[1000](playerid) {
 	if(!health_Active[playerid]) {
 		RemovePlayerAttachedObject(playerid, BLOOD_ATTACH_INDEX);
 		return;
@@ -501,17 +522,10 @@ ptask _health_update[100](playerid) {
 	}
 
 	if(health_BleedRate[playerid] > 0.0) {
-		new Float:hp = health_Blood[playerid];
+		SetPlayerBlood(playerid, health_Blood[playerid] - health_BleedRate[playerid]);
 
-		// bleed slow-down rate calculation
-		new Float:slowrate = (((((100.0 - hp) / 360.0) * health_BleedRate[playerid]) / Iter_Count(health_WoundIndex[playerid])) / 100.0);
-
-		if(frandom(1.0) < 0.7) {
-			SetPlayerBlood(playerid, hp - health_BleedRate[playerid]);
-
-			if(hp < 0.1) {
-				SetPlayerBlood(playerid, 0.0);
-			}
+		if(health_Blood[playerid] < 0.1) {
+			SetPlayerBlood(playerid, 0.0);
 		}
 
 		/*
@@ -522,11 +536,7 @@ ptask _health_update[100](playerid) {
 			will automatically stop the bleed rate due to the nature of the
 			formula (however this is still intentional).
 		*/
-		if(random(100) < 50) {
-			health_BleedRate[playerid] -= slowrate;
-		}
-
-		// ShowActionText(playerid, sprintf("HP: %f Bleed-rate: %f~n~Wounds %d Bleed slow-rate: %f", hp, health_BleedRate[playerid], GetPlayerWounds(playerid)));
+		health_BleedRate[playerid] -= GetBleedSlowRate(health_Blood[playerid], health_BleedRate[playerid], Iter_Count(health_WoundIndex[playerid]));
 
 		if(!IsPlayerInAnyVehicle(playerid)) {
 			if(IsPlayerAttachedObjectSlotUsed(playerid, BLOOD_ATTACH_INDEX)) {

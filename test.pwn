@@ -1,6 +1,9 @@
 #include "health.inc"
 
 #include <test-boilerplate>
+#include <zcmd>
+#include <action-text>
+#include <strlib>
 
 main() {
 	new playerid, targetid;
@@ -31,4 +34,64 @@ main() {
 	SerialiseWoundData(playerid, output);
 	new input[7];
 	DeSerialiseWoundData(playerid, input);
+}
+
+hook OnPlayerSpawn(playerid) {
+	SetPlayerBlood(playerid, 100.0);
+	return Y_HOOKS_CONTINUE_RETURN_1;
+}
+
+CMD:blood(playerid, params[]) {
+	new Float:value = floatstr(params);
+	new ret = SetPlayerBlood(playerid, value);
+	dbg("health", "SetPlayerBlood", _i("ret", ret));
+	return 1;
+}
+
+CMD:bleedrate(playerid, params[]) {
+	new Float:value = floatstr(params);
+	new ret = SetPlayerBleedRate(playerid, value);
+	dbg("health", "SetPlayerBleedRate", _i("ret", ret));
+	return 1;
+}
+
+CMD:woundgun(playerid, params[]) {
+	PlayerInflictWound(playerid, playerid, E_WOUND_FIREARM, 0.1, 1.0, BODY_PART_TORSO, "test");
+	return 1;
+}
+
+CMD:knockout(playerid, params[]) {
+	new duration = strval(params);
+	new ret = KnockOutPlayer(playerid, duration);
+	dbg("health", "KnockOutPlayer", _i("ret", ret));
+	return 1;
+}
+
+public OnPlayerWounded(playerid, targetid) {
+	dbg("health", "OnPlayerWounded",
+		_i("playerid", playerid),
+		_i("targetid", targetid));
+	
+	return Y_HOOKS_CONTINUE_RETURN_0;
+}
+
+ptask testui[100](playerid) {
+	new
+		Float:blood,
+		Float:bleedrate,
+		wounds,
+		Float:slowrate;
+
+	GetPlayerBlood(playerid, blood);
+	GetPlayerBleedRate(playerid, bleedrate);
+	GetPlayerWounds(playerid, wounds);
+	slowrate = GetBleedSlowRate(blood, bleedrate, wounds);
+
+	ShowActionText(playerid,
+		sprintf(
+			"Blood: %f Bleed-rate: %f~n~Wounds %d Bleed slow-rate: %f",
+			blood, bleedrate, wounds, slowrate
+		)
+	);
+	return Y_HOOKS_CONTINUE_RETURN_1;
 }

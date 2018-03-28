@@ -205,9 +205,6 @@ timer _knockout_update[100](playerid) {
 		WakeUpPlayer(playerid);
 	}
 
-	// if debug mode:
-	// ShowActionText(playerid, sprintf("%s/%s", MsToString(GetTickCountDifference(GetTickCount(), knockout_Tick[playerid]), "%1m:%1s.%1d"), MsToString(knockout_Duration[playerid], "%1m:%1s.%1d")));
-
 	return;
 }
 
